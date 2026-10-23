@@ -26,6 +26,45 @@ For example, `img/blog/2.0/uppy-performance-after.gif` is
 Never overwrite, rename or delete a file that is in use: the CDN caches files
 for a year, and existing pages link to them. Add a new file instead.
 
+## CDN setup
+
+Transloadit Smart CDN workspace `uppy-io-static`, template `static`:
+
+```json
+{
+  "steps": {
+    "imported": {
+      "robot": "/http/import",
+      "url": "https://raw.githubusercontent.com/transloadit/uppy-media/refs/heads/main/${fields.input}"
+    },
+    "filtered": {
+      "use": "imported",
+      "robot": "/file/filter",
+      "accepts": [["${file.mime}", "regex", "^(image/(jpeg|png|gif|webp|avif)|video/(mp4|webm|quicktime))$"]],
+      "declines": [["${fields.input}", "includes", ".."]],
+      "error_on_decline": true
+    },
+    "served": {
+      "use": "filtered",
+      "robot": "/file/serve",
+      "cache_duration": 31536000,
+      "headers": {
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "default-src 'none'; sandbox"
+      }
+    }
+  }
+}
+```
+
+- `/file/filter` only serves images and videos, so a merged HTML or SVG file
+  can't become a page on the CDN domain. It also rejects `..` in the path, so
+  only files from this repository are served.
+- `/file/serve` caches for a year and sends headers that stop browsers from
+  running anything it serves.
+
+Keep this section in sync when changing the template.
+
 ## History
 
 The initial files were copied from the archived
